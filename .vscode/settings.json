@@ -1,0 +1,14 @@
+{
+    "python.analysis.extraPaths": [
+        "${env:APPDATA}/Autodesk/Autodesk Fusion 360/API/Python/defs",
+        "${env:HOME}/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Python/defs"
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.defaultInterpreterPath": "python3",
+    "editor.formatOnSave": true,
+    "editor.rulers": [100],
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true
+    }
+}

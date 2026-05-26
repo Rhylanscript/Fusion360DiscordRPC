@@ -1,0 +1,9 @@
+# log files
+*.log
+
+# pycache related stuff
+__pycache__/
+*.pyc
+
+# gitignore private config.py
+config.py
