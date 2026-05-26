@@ -1,7 +1,9 @@
 """
-`discord_ipc.py`
+`lib/discord_ipc.py`
 
 Minimal Discord rich presence IPC client.
+Windows uses plain `open()` on the named pipe, while 
+macOS / Linux use a Unix socket.
 """
 
 import json
@@ -12,7 +14,7 @@ import sys
 import uuid
 
 from typing import Any, IO
-from config import CLIENT_ID
+from config.CLIENT import CLIENT_ID
 
 OP_HANDSHAKE: int = 0
 OP_FRAME: int = 1
@@ -40,6 +42,14 @@ class DiscordIPC:
     RPC:
         set_activity:   Set the client activity status with a dictionary containing keys
         clear_activity: Removes the rich presence overlay
+
+    Usage:
+        ```python
+        ipc = DiscordIPC(client_id)
+        if ipc.connect():
+            ipc.set_activity({...})
+            ipc.close()
+        ```
     """
 
     def __init__(self, client_id: str) -> None:
@@ -63,31 +73,29 @@ class DiscordIPC:
             path = _get_ipc_path(i)
             try:
                 if sys.platform == "win32":
-                    # named pipes are openable with open() im pretty sure?
                     self._pipe = open(path, "r+b", buffering=0)
-                    self._connected = True
                 else:
                     self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     self._sock.connect(path)
-                    self._connected = True
+
+                self._connected = True
                 break
+
             except Exception as e:
-                print(f"IPC connect attempt {i} failed: {e}")
+                print(f"[DiscordIPC] connect attempt {i} failed: {str(e)}")
         
         if not self._connected: return False
 
         self._send(OP_HANDSHAKE, {"v": 1, "client_id": self.client_id})
-        resp = self._recv()
-        return resp is not None
+        return self._recv() is not None
     
     def close(self):
-        """Close the IPC conn."""
+        """Close the IPC connection."""
         if not self._connected: return
 
         try:
             self._send(OP_CLOSE, {})
-        except Exception as e:
-            print(f"Error: {e}")
+        except Exception as e:...
 
         if sys.platform == "win32":
             if self._pipe:
@@ -104,7 +112,7 @@ class DiscordIPC:
         """
         Push a rich presence update to discord.
 
-        Activity dictionary keys (all are optional)
+        Supported dictionary keys (all are optional)
             details     str - first line of presence text
             state       str - second line
             start_ts    int - epoch seconds (for the 'elapsed' timer)
@@ -142,13 +150,13 @@ class DiscordIPC:
 
     @staticmethod
     def _build_activity(a: dict) -> dict:
-        activity = {}
+        activity: dict = {}
 
         if "details" in a: activity["details"] = str(a["details"])[:128]
         if "state" in a: activity["state"] = str(a["state"])[:128]
         if "start_ts" in a: activity["timestamps"] = { "start": int(a["start_ts"]) }
 
-        assets = {}
+        assets: dict = {}
 
         if "large_image" in a: assets["large_image"] = a["large_image"]
         if "large_text" in a: assets["large_text"] = str(a["large_text"])[:128]
@@ -171,19 +179,19 @@ class DiscordIPC:
         else:
             if self._sock: self._sock.sendall(msg)
 
-    def _recv(self):
+    def _recv(self) -> dict | None:
         try:
             header = self._read_exactly(8)
             if not header: return None
 
-            op, length = struct.unpack("<II", header)
+            _, length = struct.unpack("<II", header)
             body = self._read_exactly(length)
             if not body: return None
 
             return json.loads(body.decode("utf-8"))
         
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"[DiscordIPC] recv error: {str(e)}")
             return None
         
 
@@ -197,11 +205,10 @@ class DiscordIPC:
                     if not chunk: break
                     buf += chunk
 
-        else:
-            if self._sock:
-                while len(buf) < n:
-                    chunk = self._sock.recv(n - len(buf))
-                    if not chunk: break
-                    buf += chunk
+        elif self._sock:
+            while len(buf) < n:
+                chunk = self._sock.recv(n - len(buf))
+                if not chunk: break
+                buf += chunk
         
         return buf

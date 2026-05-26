@@ -6,7 +6,7 @@
     "description": {
         "": "Shows your current Fusion360 activity in Discord via rich presence"
     },
-    "version": "0.1.0",
+    "version": "0.1.1",
     "runOnStartup": false,
     "supportedOS": "windows|mac",
     "editEnabled": true

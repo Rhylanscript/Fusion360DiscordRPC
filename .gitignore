@@ -5,5 +5,5 @@
 __pycache__/
 *.pyc
 
-# gitignore private config.py
-config.py
+# gitignore private CLIENT.py (containing client id)
+CLIENT.py

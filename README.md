@@ -31,10 +31,10 @@ No external pip dependencies are required for this addin!
 
 ### 2. Configure the Add in
 
-Create `config.py` in the root directory of this folder and in it paste your Application ID into `CLIENT_ID`:
+Create `CLIENT.py` in the directory `config/CLIENT.py` and paste your Application ID into `CLIENT_ID`:
 
 ```python
-CLIENT_ID: str = "(paste application id here)"
+CLIENT_ID: str = "{paste application id here}"
 ```
 
 ### 3. Install the Add in
@@ -51,9 +51,9 @@ Copy (or symlink) the entire root folder into Fusion360's addins directory, ensu
 1. Open Fusion360 and press `Shift+S` to open scripts & addins
 2. Go to the **Add-Ins** tab and find **Fusion360DiscordRPC**
 3. Toggle it on (or run it) - the window will close
-4. **!!IMPORTANT!!** Make sure you have discord open before you run it!
+4. **IMPORTANT** Make sure you have discord open before you run it!
 
-Check the **Run on Startup** box to load it automatically every time Fusion opens.
+**Optionally:** Check the **Run on Startup** box to load it automatically every time Fusion opens.
 
 ## VSCode Setup
 
@@ -75,16 +75,16 @@ If all else fails, replace the entries in settings.json with the direct path (no
 
 ## What is Shown
 
-| Field   | Value                                              |
-| ------- | -------------------------------------------------- |
-| Details | `Designing "<document name>"`                      |
-| State   | `<N> components · <workspace>`                     |
-| Elapsed | Time since the addin was loaded                    |
-| Icon    | Fusion 360 Logo in `assets/` (provided you step 1) |
+| Field   | Value                                                 |
+| ------- | ----------------------------------------------------- |
+| Details | `Designing "<document name>"`                         |
+| State   | `<N> components · <workspace>`                        |
+| Elapsed | Time since the addin was loaded                       |
+| Icon    | Fusion 360 Logo in `assets/` (provided you do step 1) |
 
 ## Configuration
 
-Edit the constants at the top of `Fusion360DiscordRPC.py`:
+Edit the constants found in `config/config.py`:
 
 ```python
 POLL_INTERVAL = 15              # Seconds between background refreshes
@@ -104,10 +104,21 @@ Fusion360DiscordRPC/                # root directory
 │   ├── launch.json                 # Fusion debugger config
 │   └── settings.json               # pylance paths for adsk.* files
 │
+├── commands/                       # folder containing command logic
+│   └── presence.py                 # houses all presence logic 
+│
+├── config/                         # folder containing config files
+│   ├── CLIENT.py                   # contains your CLIENT_ID
+│   └── config.py                   # contains configuration values 
+│
+├── handlers/                       # folder event handlers
+│   └── document.py                 # document event handlers in here 
+│
+├── lib/                            # folder containing command logic
+│   └── discord_ipc.py              # Discord IPC client  
+│
 ├── Fusion360DiscordRPC.manifest    # addin metadata
 ├── Fusion360DiscordRPC.py          # addin entrypoint
-├── discord_ipc.py                  # Discord IPC client
-├── config.py                       # contains your CLIENT_ID
 │
 └── README.md                       # Project README file
 ```
