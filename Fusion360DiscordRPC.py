@@ -2,13 +2,12 @@
 `Fusion360DiscordRPC.py`
 Fusion360 add in entrypoint.
 
-Hooks into Fusion360's workspace events and pushes RPC
-updates to discord through the local IPC socket. 
-(established from `discord_ipc.py`)
-
 Responsibilities:
     `run()`     - wire up the presencemanager and event handlers
     `stop()`    - tear everything down CALMLY
+
+Requires FusionkitRibbonAPI for ribbon controls (degrades 
+gracefully if absent).
 
 All business logic lives in `commands/` and `handlers/`.
 """
@@ -24,7 +23,7 @@ import adsk.core
 import adsk.fusion
 
 from commands.presence import PresenceManager
-from commands.ribbon import RibbonManager
+from commands import ribbon
 from handlers.document import DocumentActivatedHandler, DocumentCreatedHandler
 
 # ------------------------------------------
@@ -32,7 +31,6 @@ from handlers.document import DocumentActivatedHandler, DocumentCreatedHandler
 # ------------------------------------------
 
 _manager: PresenceManager | None = None
-_ribbon: RibbonManager | None = None
 _handlers: list = []
 
 # ------------------------------------------
@@ -40,7 +38,7 @@ _handlers: list = []
 # ------------------------------------------
 
 def run(context) -> None:
-    global _manager, _ribbon, _handlers
+    global _manager, _handlers
 
     app = adsk.core.Application.get()
     ui = app.userInterface
@@ -49,8 +47,7 @@ def run(context) -> None:
         _manager = PresenceManager(app, ui)
         _manager.start()
 
-        _ribbon = RibbonManager(ui, _manager)
-        _ribbon.setup()
+        ribbon.setup(_manager, ui)
 
         _handlers = _register_handlers(app, _manager)
 
@@ -62,13 +59,10 @@ def run(context) -> None:
         )
 
 def stop(context) -> None:
-    global _manager, _ribbon, _handlers
+    global _manager, _handlers
 
     _handlers.clear()
-
-    if _ribbon:
-        _ribbon.teardown()
-        _ribbon = None
+    ribbon.teardown()
 
     if _manager:
         _manager.stop()
@@ -79,10 +73,9 @@ def stop(context) -> None:
 # ------------------------------------------
 
 def _register_handlers(
-        app: adsk.core.Application,
-        manager: PresenceManager,
-    ) -> list:
-
+    app: adsk.core.Application,
+    manager: PresenceManager,
+) -> list:
     """Register all Fusion event handlers and return them for later cleanup."""
 
     handlers = []

@@ -1,35 +1,29 @@
 """
 `commands/ribbon.py`
 
-Owns the FusionKit ribbon tab, the Discord RPC panel and 
-all controls.
-
-Structure:
-    Workspace: DesignWorkspace
-      > Tab:   FusionKit        (FUSIONKIT_TAB_ID)
-          > Panel: Discord RPC  (FUSIONKIT_DISCORD_PANEL_ID)
-              > Toggle: Enable presence
-              > Button: Reconnect
+Registers the Discord RPC panel and buttons via FusionkitRibbonAPI.
 
 Call `setup()` in `run()`, `teardown()` in `stop()`. All
 IDs are prefixed to avoid collisions with other add-ins.
+
+If FusionkitRibbonAPI is not installed, setup() logs a warning and 
+returns. The add-in continues to work, just without ribbon controls.
 """
 
 import os
-import adsk.core    # type: ignore
-import adsk.fusion  # type: ignore
 
-from commands.presence import PresenceManager
+import adsk.core
 
-# STABLE IDS
+from typing import TYPE_CHECKING
+if TYPE_CHECKING: from commands.presence import PresenceManager
 
-FUSIONKIT_TAB_ID            = "fusionkit_tab"
-FUSIONKIT_DISCORD_PANEL_ID  = "fusionkit_discord_rpc_panel"
+# Attempt to import Fusionkit
+try:
+    import FusionkitRibbonAPI as fusionkit
+    HAS_FUSIONKIT = True
+except ImportError:
+    HAS_FUSIONKIT = False
 
-TOGGLE_CMD_ID               = "fusionkit_discord_toggle_presence"
-RECONNECT_CMD_ID            = "fusionkit_discord_reconnect"
-
-DESIGN_WORKSPACE            = "FusionSolidEnvironment"
 
 # ICON PATHS
 _HERE           = os.path.dirname(os.path.abspath(__file__))
@@ -38,232 +32,110 @@ _RESOURCES      = os.path.join(_HERE, "..", "resources")
 TOGGLE_ICON     = os.path.join(_RESOURCES, "fusionkit_discord_toggle")
 RECONNECT_ICON  = os.path.join(_RESOURCES, "fusionkit_discord_reconnect")
 
+PANEL_ID = "discord_rpc"
 
-class RibbonManager:
+# track enabled state and ui ref for status bar feedback
+_enabled = True
+_ui = None
+
+
+def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
     """
-    Creates and tears down the FusionKit tab and Discord 
-    RPC panel.
-
-    Keeps references to every created object so `teardown()`
-    can remove them cleanly in reverse order.
+    Register the Discord RPC panel in the Fusionkit tab.
+    Safe to call every `run()`, idempotent via API.
     """
-    def __init__(
-        self,
-        ui: adsk.core.UserInterface,
-        manager: PresenceManager,
-    ) -> None:
-        self._ui = ui
-        self._manager = manager
-        self._enabled = True
 
-        # track created objs for teardown
-        self._tab: adsk.core.ToolbarTab | None = None
-        self._panel: adsk.core.ToolbarPanel | None = None
+    global _ui
+    _ui = ui
 
-        self._toggle_def: adsk.core.CommandDefinition | None = None
-        self._reconnect_def: adsk.core.CommandDefinition | None = None
-        
-        self._handlers: list = []
-
-
-    # PUBLIC API
-
-    def setup(self) -> None:
-        """Create tab, panel and controls. safe to call on every `run()`."""
-
-        workspace = self._ui.workspaces.itemById(DESIGN_WORKSPACE)
-        if not workspace:
-            print("[RibbonManager] Could not find DesignWorkspace - ribbon not created")
-            return
-        
-        self._tab = self._get_or_create_tab(workspace)
-        self._panel = self._get_or_create_panel()
-        self._create_toggle()
-        self._create_reconnect_button()
-
-    def teardown(self) -> None:
-        """Remove all controls, panel and tab created by add-in"""
-        self._handlers.clear()
-
-        for cmd_id in (TOGGLE_CMD_ID, RECONNECT_CMD_ID):
-            self._delete_command_definition(cmd_id)
-
-        if self._panel:
-            try:
-                self._panel.deleteMe()
-            except Exception:...
-            self._panel = None
-
-        if self._tab:
-            try:
-                self._tab.deleteMe()
-            except Exception:...
-            self._tab = None
-
-    # TAB / PANEL
-
-    def _get_or_create_tab(self, workspace: adsk.core.Workspace) -> adsk.core.ToolbarTab:
-        tab = workspace.toolbarTabs.itemById(FUSIONKIT_TAB_ID)
-        if not tab:
-            tab = workspace.toolbarTabs.add(FUSIONKIT_TAB_ID, "FusionKit")
-        return tab
-    
-    def _get_or_create_panel(self) -> adsk.core.ToolbarPanel:
-        if not self._tab:
-            raise RuntimeError("Tab must exist before panel.")
-        panel = self._tab.toolbarPanels.itemById(FUSIONKIT_DISCORD_PANEL_ID)
-        if not panel:
-            panel = self._tab.toolbarPanels.add(
-                FUSIONKIT_DISCORD_PANEL_ID, "Discord RPC"
-            )
-        return panel
-    
-    # CONTROLS
-
-    def _create_toggle(self) -> None:
-        """Add a checkbox for enabling/disabling rich presence."""
-        if not self._panel: return
-
-        # clean up stale definitions
-        self._delete_command_definition(TOGGLE_CMD_ID)
-
-        toggle_def = self._ui.commandDefinitions.addButtonDefinition(
-            TOGGLE_CMD_ID,
-            "Disable Presence",
-            "Presence is active. Click to disable.",
-            TOGGLE_ICON
+    if HAS_FUSIONKIT:
+        panel: fusionkit.FusionkitPanel = fusionkit.register_panel(PANEL_ID, "Discord RPC")
+        panel.add_button(
+            id          = "toggle",
+            name        = "Disable Presence",
+            tooltip     = "Presence is active. Click to disable.",
+            icon_path   = TOGGLE_ICON,
+            on_execute  = lambda: _on_toggle(manager, panel),
+            promoted    = True,
         )
-        self._toggle_def = toggle_def
 
-        handler = _ToggleCreatedHandler(self._manager, self)
-        toggle_def.commandCreated.add(handler)
-        self._handlers.append(handler)
-
-        control = self._panel.controls.addCommand(toggle_def)
-        control.isPromotedByDefault = True
-
-    def _create_reconnect_button(self) -> None:
-        """Add a button to reconnect to Discord IPC."""
-        if not self._panel: return
-
-        self._delete_command_definition(RECONNECT_CMD_ID)
-
-        reconnect_def = self._ui.commandDefinitions.addButtonDefinition(
-            RECONNECT_CMD_ID,
-            "Reconnect",
-            "Reconnect to Discord. Use if Discord wasn't open when Fusion launched.",
-            RECONNECT_ICON,     # default icon path
+        panel.add_button(
+            id          = "reconnect",
+            name        = "Reconnect",
+            tooltip     = "Reconnect to Discord. Use if Discord wasn't open when Fusion started.",
+            icon_path   = RECONNECT_ICON,
+            on_execute  = lambda: _on_reconnect(manager, panel)
         )
-        self._reconnect_def = reconnect_def
+    else:
+        print(
+            "[DiscordRPC] FusionkitRibbonAPI is not installed - "
+            "ribbon controls unavailable. "
+            "Install it from Install it from https://github.com/Rhylanscript/FusionkitRibbonAPI"
+        )
+        ui.messageBox(
+            "FusionkitRibbonAPI is not installed.\n\n"
+            "Discord RPC will still work, but ribbon controls\n"
+            "(toggle and reconnect) won't be available.\n\n"
+            "Install FusionkitRibbonAPI to enable them.",
+            "Fusionkit - Missing Dependency",
+        )
+        return
 
-        handler = _ReconnectCreatedHandler(self._manager, self)
-        reconnect_def.commandCreated.add(handler)
-        self._handlers.append(handler)
+def teardown() -> None:
+    """Unregister the Discord RPC panel. Tab remains."""
+    if HAS_FUSIONKIT: fusionkit.unregister_panel(PANEL_ID)
 
-        self._panel.controls.addCommand(reconnect_def)
 
-    # TOGGLE STATE HELPERS
+# BUTTON CALLBACKS
 
-    def set_enabled(self, enabled: bool) -> None:
-        """Update local state and flip the button label"""
-        self._enabled = enabled
-        if self._toggle_def:
-            self._toggle_def.name = "Disable Presence" if enabled else "Enable Presence"
-            self._toggle_def.tooltip = "Presence is active. Click to disable." if enabled else "Presence is paused. Click to enable." 
+def _status(msg: str) -> None:
+    """Write a non-blocking message to Fusion's status bar"""
+    if _ui: _ui.statusMessage = msg
 
-        # non blocking status message
-        msg = "Discord RPC: presence enabled." if enabled else "Discord RPC: presence paused."
-        self._ui.statusMessage = msg 
+def _on_toggle(manager: "PresenceManager", panel) -> None:
+    global _enabled
+    _enabled = not _enabled
 
-    def sync_toggle_to_connected(self, connected: bool) -> None:
-        """After a reconnect sync toggle label."""
-        self.set_enabled(connected)
+    if _enabled:
+        manager.enable()
+        panel.update_button("toggle",
+            name    = "Disable Presence",
+            tooltip = "Presence is active. Click to disable.",
+        )
+        _status("Discord RPC: presence enabled.")
+    else:
+        manager.disable()
+        panel.update_button("toggle",
+            name    = "Enable Presence",
+            tooltip = "Presence is paused. Click to enable.",
+        )
+        _status("Discord RPC: presence paused.")
 
-        if connected:
-            self._ui.messageBox(
+def _on_reconnect(manager: "PresenceManager", panel) -> None:
+    global _enabled
+    success = manager.reconnect()
+ 
+    # sync toggle label
+    _enabled = success
+    
+    if success:
+        panel.update_button("toggle",
+            name    = "Disable Presence",
+            tooltip = "Presence is active. Click to disable.",
+        )
+        if _ui:
+            _ui.messageBox(
                 "Successfully reconnected to Discord.",
                 "Discord RPC",
-                adsk.core.MessageBoxButtonTypes.OKButtonType,       # type: ignore
-                adsk.core.MessageBoxIconTypes.InformationIconType,  # type: ignore
             )
-        else:
-            self._ui.messageBox(
-                "Could not connect to Discord.\nEnsure Discord is running and try again.",
+    else:
+        panel.update_button("toggle",
+            name    = "Enable Presence",
+            tooltip = "Presence is paused. Click to enable.",
+        )
+        if _ui:
+            _ui.messageBox(
+                "Could not connect to Discord.\n"
+                "Make sure Discord is running and try again.",
                 "Discord RPC",
-                adsk.core.MessageBoxButtonTypes.OKButtonType,       # type: ignore
-                adsk.core.MessageBoxIconTypes.CriticalIconType,     # type: ignore
             )
-
-    # HELPERS
-
-    def _delete_command_definition(self, cmd_id: str) -> None:
-        """Delete a CommandDefinition by ID if it exists."""
-        existing = self._ui.commandDefinitions.itemById(cmd_id)
-        if existing:
-            try:
-                existing.deleteMe()
-            except Exception:...
-
-
-# COMMAND HELPERS
-
-class _ToggleCreatedHandler(adsk.core.CommandCreatedEventHandler):
-    def __init__(self, manager: PresenceManager, ribbon: RibbonManager) -> None:
-        super().__init__()
-        self._manager = manager
-        self._ribbon = ribbon
-        self._execute_handler: adsk.core.CommandEventHandler | None = None
-
-    def notify(self, args: adsk.core.CommandCreatedEventArgs) -> None:
-        self._execute_handler = _ToggleExecuteHandler(self._manager, self._ribbon)
-        args.command.execute.add(self._execute_handler)
-
-class _ToggleExecuteHandler(adsk.core.CommandEventHandler):
-    def __init__(self, manager: PresenceManager, ribbon: RibbonManager) -> None:
-        super().__init__()
-        self._manager = manager
-        self._ribbon = ribbon
-
-    def notify(self, args: adsk.core.CommandEventArgs) -> None:
-        try:
-            if self._ribbon._enabled:
-                self._manager.disable()
-                self._ribbon.set_enabled(False)
-            else:
-                self._manager.enable()
-                self._ribbon.set_enabled(True)
-
-        except Exception as e:
-            print(f"[ToggleHandler] error: {str(e)}")
-
-class _ReconnectCreatedHandler(adsk.core.CommandCreatedEventHandler):
-    def __init__(
-        self,
-        manager: PresenceManager,
-        ribbon: RibbonManager
-    ) -> None:
-        super().__init__()
-        self._manager = manager
-        self._ribbon = ribbon
-        self._execute_handler: adsk.core.CommandEventHandler | None = None
-
-    def notify(self, args: adsk.core.CommandCreatedEventArgs) -> None:
-        self._execute_handler = _ReconnectExecuteHandler(self._manager, self._ribbon)
-        args.command.execute.add(self._execute_handler)
-
-class _ReconnectExecuteHandler(adsk.core.CommandEventHandler):
-    def __init__(
-        self,
-        manager: PresenceManager,
-        ribbon: RibbonManager,
-    ) -> None:
-        super().__init__()
-        self._manager = manager
-        self._ribbon = ribbon
-
-    def notify(self, args: adsk.core.CommandEventArgs) -> None:
-        try:
-            success = self._manager.reconnect()
-            self._ribbon.sync_toggle_to_connected(success)
-        except Exception as e:
-            print(f"[ReconnectHandler] error: {str(e)}")
