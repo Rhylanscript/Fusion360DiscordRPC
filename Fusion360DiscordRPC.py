@@ -18,47 +18,64 @@ import os
 # Ensure the addin dir is on sys.path so relative imports work
 # inside fusions python environment
 _base = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, _base)
+if _base not in sys.path: sys.path.insert(0, _base)
 
 import adsk.core
 import adsk.fusion
 
 from commands.presence import PresenceManager
+from commands.ribbon import RibbonManager
 from handlers.document import DocumentActivatedHandler, DocumentCreatedHandler
 
 # ------------------------------------------
-#               MODULE STATE
+#                MODULE STATE
 # ------------------------------------------
 
 _manager: PresenceManager | None = None
+_ribbon: RibbonManager | None = None
 _handlers: list = []
 
 # ------------------------------------------
-#             ADD-IN LIFECYCLE
+#              ADD-IN LIFECYCLE
 # ------------------------------------------
 
 def run(context) -> None:
-    global _manager, _handlers
+    global _manager, _ribbon, _handlers
 
     app = adsk.core.Application.get()
     ui = app.userInterface
 
-    _manager = PresenceManager(app, ui)
-    if not _manager.start(): return
+    try:
+        _manager = PresenceManager(app, ui)
+        _manager.start()
 
-    _handlers = _register_handlers(app, _manager)
+        _ribbon = RibbonManager(ui, _manager)
+        _ribbon.setup()
+
+        _handlers = _register_handlers(app, _manager)
+
+    except Exception as e:
+        import traceback
+        ui.messageBox(
+            f"Fusion360DiscordRPC failed to start:\n{traceback.format_exc()}",
+            "Discord RPC - Error"
+        )
 
 def stop(context) -> None:
-    global _manager, _handlers
+    global _manager, _ribbon, _handlers
+
+    _handlers.clear()
+
+    if _ribbon:
+        _ribbon.teardown()
+        _ribbon = None
 
     if _manager:
         _manager.stop()
         _manager = None
-
-    _handlers.clear()
     
 # ------------------------------------------
-#             EVENT REGISTRATION
+#            EVENT REGISTRATION
 # ------------------------------------------
 
 def _register_handlers(

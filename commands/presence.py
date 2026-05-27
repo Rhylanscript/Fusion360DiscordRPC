@@ -19,6 +19,16 @@ from config.config import LARGE_IMAGE_KEY, POLL_INTERVAL
 class PresenceManager:
     """
     Owns the Discord IPC connection and the background poll loop.
+
+    LifeCycle:
+        `start()`   - connect and begin polling
+        `stop()`    - disconnect and stop polling
+        `push()`    - manual presence refresh
+
+    Ribbon Controls:
+        `enable()`      - re-enable presence (toggle on)
+        `disable()`     - suppress presence without disconnecting (toggle off)
+        `reconnect()`   - close and reopen the IPC connection
  
     Usage:
         ```python
@@ -45,6 +55,8 @@ class PresenceManager:
         self._poll_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
+        self._enabled: bool = True
+
     # LIFECYCLE
 
     def start(self) -> bool:
@@ -63,14 +75,13 @@ class PresenceManager:
             )
             return False
         
-        self._ipc = DiscordIPC(CLIENT_ID)
-        if not self._ipc.connect():
+        if not self._connect():
             self._ui.messageBox(
                 "Fusion360DiscordRPC: Couldn't connect to Discord.\n"
-                "Ensure Discord is running.",
+                "Ensure Discord is running.\n"
+                "Use the Reconnect button in the FusionKit tab once discord is open.",
                 "Discord RPC"
             )
-            return False
         
         self._start_ts = int(time.time())
         self.push()
@@ -89,12 +100,48 @@ class PresenceManager:
             self._ipc.clear_activity()
             self._ipc.close()
             self._ipc = None
+
+
+    # RIBBON CONTROL
+
+    def enable(self) -> None:
+        """Re-enables presence updates (called by toggle turn on)."""
+        self._enabled = True
+        self.push()
+
+    def disable(self) -> None:
+        """Suppress presence updates without disconnecting (called by toggle turning off)."""
+        self._enabled = False
+        if self._ipc: self._ipc.clear_activity()
+
+    def reconnect(self) -> bool:
+        """
+        Close the existing IPC conn and open a new one. Called
+        by the reconnect button.
+
+        Returns:
+            True if reconnection is a success.
+        """
+        if self._ipc:
+            try:
+                self._ipc.close()
+            except Exception:...
+
+            self._ipc = None
+        
+        success = self._connect()
+        if success:
+            self._start_ts = int(time.time())
+            self.push()
+
+        return success
+
     
     # PRESENCE
 
     def push(self) -> None:
         """Read Fusion state and send a presence update."""
-        if not self._ipc: return
+        if not self._ipc or not self._enabled: return
 
         details, state = self._get_fusion_state()
         self._ipc.set_activity({
@@ -147,7 +194,15 @@ class PresenceManager:
             return [workspace.name] if workspace else []
         except Exception: return []
 
-    # BACKGROUND POLLING
+    # INTERNAL
+
+    def _connect(self) -> bool:
+        """Open a fresh IPC connection. Returns True on success."""
+        ipc = DiscordIPC(CLIENT_ID)
+        if ipc.connect():
+            self._ipc = ipc
+            return True
+        return False
 
     def _poll_loop(self) -> None:
         """Periodically refresh presence so the elapsed timer ticks."""

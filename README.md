@@ -94,33 +94,38 @@ LARGE_IMAGE_KEY = "fusion360"   # Must match the key in the Discord Dev Portal
 ## Project Structure
 
 ```text
-Fusion360DiscordRPC/                # root directory
-├── assets/                         # folder containing assets
-│   ├── fusion360.png               # Fusion 360 logo for Dev Portal
-│   └── ... (other files)           # any README assets / log files
+Fusion360DiscordRPC/                  # root directory
+├── .vscode/                          # VSCode configuration files
+│   ├── extensions.json               # Recommended VSCode extensions
+│   ├── launch.json                   # Fusion debugger config
+│   └── settings.json                 # pylance paths for adsk.* files
 │
-├── .vscode/                        # VSCode configuration files
-│   ├── extensions.json             # Recommended VSCode extensions
-│   ├── launch.json                 # Fusion debugger config
-│   └── settings.json               # pylance paths for adsk.* files
+├── resources/                        # folder for project resources
+│   ├── fusionkit_discord_reconnect/  # resources for reconnect icon
+│   │   └── ...
+│   ├── fusionkit_discord_toggle/     # resources for toggle icon
+│   │   └── ...
+│   ├── fusion360.png                 # Fusion 360 logo for Dev Portal
+│   └── ... (other files)             # any README assets / log files
 │
-├── commands/                       # folder containing command logic
-│   └── presence.py                 # houses all presence logic 
+├── commands/                         # folder containing command logic
+│   ├── presence.py                   # houses all presence logic 
+│   └── ribbon.py                     # houses logic for ribbon
 │
-├── config/                         # folder containing config files
-│   ├── CLIENT.py                   # contains your CLIENT_ID
-│   └── config.py                   # contains configuration values 
+├── config/                           # folder containing config files
+│   ├── CLIENT.py                     # contains your CLIENT_ID
+│   └── config.py                     # contains configuration values 
 │
-├── handlers/                       # folder event handlers
-│   └── document.py                 # document event handlers in here 
+├── handlers/                         # folder event handlers
+│   └── document.py                   # document event handlers in here 
 │
-├── lib/                            # folder containing command logic
-│   └── discord_ipc.py              # Discord IPC client  
+├── lib/                              # folder containing command logic
+│   └── discord_ipc.py                # Discord IPC client  
 │
-├── Fusion360DiscordRPC.manifest    # addin metadata
-├── Fusion360DiscordRPC.py          # addin entrypoint
+├── Fusion360DiscordRPC.manifest      # addin metadata
+├── Fusion360DiscordRPC.py            # addin entrypoint
 │
-└── README.md                       # Project README file
+└── README.md                         # Project README file
 ```
 
 ## How it works
@@ -131,8 +136,8 @@ No external dependencies are required for this Add in.
 
 <!-- ASSET REFERENCES -->
 
-[preview]: /assets/preview.png
-[logo]: /assets/logo.png
+[preview]: /resources/preview.png
+[logo]: /resources/fusion360.png
 
 <!-- LINK REFERENCES -->
 
