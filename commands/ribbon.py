@@ -6,15 +6,15 @@ Registers the Discord RPC panel and buttons via FusionkitRibbonAPI.
 Call `setup()` in `run()`, `teardown()` in `stop()`. All
 IDs are prefixed to avoid collisions with other add-ins.
 
-If FusionkitRibbonAPI is not installed, setup() logs a warning and 
-returns. The add-in continues to work, just without ribbon controls.
+If FusionkitRibbonAPI is not installed, `setup()` logs a warning and 
+returns. The add-in continues to work without ribbon controls.
 """
 
 import os
+from typing import TYPE_CHECKING
 
 import adsk.core
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING: from commands.presence import PresenceManager
 
 # Attempt to import Fusionkit
@@ -31,11 +31,13 @@ _RESOURCES      = os.path.join(_HERE, "..", "resources")
 
 TOGGLE_ICON     = os.path.join(_RESOURCES, "fusionkit_discord_toggle")
 RECONNECT_ICON  = os.path.join(_RESOURCES, "fusionkit_discord_reconnect")
+PRIVACY_ICON    = os.path.join(_RESOURCES, "fusionkit_discord_privacy")
 
 PANEL_ID = "discord_rpc"
 
 # track enabled state and ui ref for status bar feedback
 _enabled = True
+_privacy = False
 _ui = None
 
 
@@ -48,25 +50,7 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
     global _ui
     _ui = ui
 
-    if HAS_FUSIONKIT:
-        panel: fusionkit.FusionkitPanel = fusionkit.register_panel(PANEL_ID, "Discord RPC")
-        panel.add_button(
-            id          = "toggle",
-            name        = "Disable Presence",
-            tooltip     = "Presence is active. Click to disable.",
-            icon_path   = TOGGLE_ICON,
-            on_execute  = lambda: _on_toggle(manager, panel),
-            promoted    = True,
-        )
-
-        panel.add_button(
-            id          = "reconnect",
-            name        = "Reconnect",
-            tooltip     = "Reconnect to Discord. Use if Discord wasn't open when Fusion started.",
-            icon_path   = RECONNECT_ICON,
-            on_execute  = lambda: _on_reconnect(manager, panel)
-        )
-    else:
+    if not HAS_FUSIONKIT:
         print(
             "[DiscordRPC] FusionkitRibbonAPI is not installed - "
             "ribbon controls unavailable. "
@@ -80,6 +64,32 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
             "Fusionkit - Missing Dependency",
         )
         return
+    
+    panel: fusionkit.FusionkitPanel = fusionkit.register_panel(PANEL_ID, "Discord RPC")
+    panel.add_button(
+        id          = "toggle",
+        name        = "Disable Presence",
+        tooltip     = "Presence is active. Click to disable.",
+        icon_path   = TOGGLE_ICON,
+        on_execute  = lambda: _on_toggle(manager, panel),
+        promoted    = True,
+    )
+
+    panel.add_button(
+        id          = "reconnect",
+        name        = "Reconnect",
+        tooltip     = "Reconnect to Discord. Use if Discord wasn't open when Fusion started.",
+        icon_path   = RECONNECT_ICON,
+        on_execute  = lambda: _on_reconnect(manager, panel)
+    )
+
+    panel.add_button(
+        id          = "privacy",
+        name        = "Enable Privacy Mode",
+        tooltip     = "Hides the document name from your discord presence.",
+        icon_path   = PRIVACY_ICON,
+        on_execute  = lambda: _on_privacy(manager, panel),
+    )
 
 def teardown() -> None:
     """Unregister the Discord RPC panel. Tab remains."""
@@ -139,3 +149,23 @@ def _on_reconnect(manager: "PresenceManager", panel) -> None:
                 "Make sure Discord is running and try again.",
                 "Discord RPC",
             )
+
+def _on_privacy(manager: "PresenceManager", panel) -> None:
+    global _privacy
+    _privacy = not _privacy
+    manager.set_privacy(_privacy)
+
+    if _privacy:
+        panel.update_button(
+            "privacy",
+            name    = "Disable Privacy Mode",
+            tooltip = "Privacy mode is enabled - document name is hidden. Click to enable."
+        )
+        _status("Discord RPC: Privacy mode enabled.")
+    else:
+        panel.update_button(
+            "privacy",
+            name    = "Enable Privacy Mode",
+            tooltip = "Hides the document name from your Discord presence."
+        )
+        _status("Discord RPC: Privacy mode disabled.")

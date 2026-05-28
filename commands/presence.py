@@ -29,6 +29,7 @@ class PresenceManager:
         `enable()`      - re-enable presence (toggle on)
         `disable()`     - suppress presence without disconnecting (toggle off)
         `reconnect()`   - close and reopen the IPC connection
+        `set_privacy()` - toggle privacy mode (hides doc name)
  
     Usage:
         ```python
@@ -56,6 +57,7 @@ class PresenceManager:
         self._stop_event = threading.Event()
 
         self._enabled: bool = True
+        self._privacy: bool = False
 
     # LIFECYCLE
 
@@ -114,6 +116,11 @@ class PresenceManager:
         self._enabled = False
         if self._ipc: self._ipc.clear_activity()
 
+    def set_privacy(self, enabled: bool) -> None:
+        """Toggle the document privacy mode."""
+        self._privacy = enabled
+        self.push()
+
     def reconnect(self) -> bool:
         """
         Close the existing IPC conn and open a new one. Called
@@ -162,7 +169,7 @@ class PresenceManager:
             if doc is None: return "Idle", "No Document Open"
 
             doc_name = doc.name or "Untitled"
-            details = f'Designing "{doc_name}"'
+            details = "Working in Fusion 360" if self._privacy else f'Designing "{doc_name}"'
             state_parts: list[str] = []
 
             state_parts += self._get_component_info(doc)
@@ -210,3 +217,7 @@ class PresenceManager:
             try:
                 self.push()
             except Exception:...
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled

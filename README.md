@@ -13,6 +13,7 @@ Example previews:
 - Shows component count and active workspace
 - Elapsed timer from when the add-in was loaded
 - Updates automatically when document is switched
+- Has a 'privacy mode' option which hides document name
 
 ## Requirements
 
@@ -77,21 +78,10 @@ If all else fails, replace the entries in settings.json with the direct paths (n
 ```json
 {
   "python.analysis.extraPaths": [
-    "{your path prefix here}/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs"
-  ]
-  // rest of the code like normal
-  // note that the second entry isn't required for this method
-}
-```
-
-You may also need to modify the reference to `FusionkitRibbonAPI`:
-
-```json
-{
-  "python.analysis.extraPaths": [
+    "{your path prefix here}/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs",
     "{path prefix}/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Addins/FusionkitRibbonAPI"
   ]
-  ...
+  // rest of the json data like normal
 }
 ```
 
@@ -99,7 +89,7 @@ You may also need to modify the reference to `FusionkitRibbonAPI`:
 
 | Field   | Value                                                 |
 | ------- | ----------------------------------------------------- |
-| Details | `Designing "<document name>"`                         |
+| Details | `Designing {"<document name>` or `in Fusion 360}"`    |
 | State   | `<N> components · <workspace>`                        |
 | Elapsed | Time since the addin was loaded                       |
 | Icon    | Fusion 360 Logo in `assets/` (provided you do step 1) |
@@ -123,9 +113,7 @@ Fusion360DiscordRPC/                  # root directory
 │   └── settings.json                 # pylance paths for adsk.* files
 │
 ├── resources/                        # folder for project resources
-│   ├── fusionkit_discord_reconnect/  # resources for reconnect icon
-│   │   └── ...
-│   ├── fusionkit_discord_toggle/     # resources for toggle icon
+│   ├── fusionkit_discord_.../        # resources for button icons
 │   │   └── ...
 │   ├── fusion360.png                 # Fusion 360 logo for Dev Portal
 │   └── ... (other files)             # any README assets / log files
