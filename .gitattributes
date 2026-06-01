@@ -1,0 +1,4 @@
+# register css, js and html
+*.css linguist-language=CSS
+*.js linguist-language=JavaScript
+*.html linguist-language=HTML
