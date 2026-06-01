@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customise Discord Rich Presence</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="title">Customise Discord Rich Presence</h2>
+        <div class="fields">
+            <div class="field">
+                <label for="details">Details</label>
+                <input type="text" id="details" placeholder='Designing "{document_name}"'>
+            </div>
+            <div class="field">
+                <label for="state">State</label>
+                <input type="text" id="state" placeholder="{component_count} · {workspace}">
+            </div>
+            <div class="field">
+                <label for="large_text">Large Icon Tooltip</label>
+                <input type="text" id="large_text" placeholder="Autodesk Fusion 360">
+            </div>
+            <div class="field">
+                <label for="idle_text">Idle Text</label>
+                <input type="text" id="idle_text" placeholder="Idle">
+            </div>
+            <div class="field">
+                <label for="privacy_text">Privacy Mode Text</label>
+                <input type="text" id="privacy_text" placeholder="Working in Fusion 360">
+            </div>
+        </div>
+        <div class="token-section">
+            <h3 class="token-title">Available Tokens</h3>
+            <table class="token-table">
+                <tbody>
+                    <tr>
+                        <td class="token">{document_name}</td>
+                        <td class="desc">The name of the active document</td>
+                    </tr>
+                    <tr>
+                        <td class="token">{workspace}</td>
+                        <td class="desc">The active workspace (e.g. Design, Manufacture)</td>
+                    </tr>
+                    <tr>
+                        <td class="token">{component_count}</td>
+                        <td class="desc">Number of components (e.g. "12 components")</td>
+                    </tr>
+                    <tr>
+                        <td class="token">{app_version}</td>
+                        <td class="desc">Fusion 360 version string</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-secondary" id="btn-revert">Revert to Defaults</button>
+            <div class="actions-right">
+                <button class="btn btn-cancel" id="btn-cancel">Cancel</button>
+                <button class="btn btn-primary" id="btn-save">Save</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

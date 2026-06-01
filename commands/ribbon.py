@@ -38,10 +38,10 @@ CUSTOMISE_ICON  = os.path.join(_RESOURCES, "fusionkit_discord_customise")
 PANEL_ID = "discord_rpc"
 
 # track enabled state and ui ref for status bar feedback
-_enabled = True
-_privacy = False
-_ui = None
-_customise_handlers: list = []
+_enabled                    = True
+_privacy                    = False
+_ui                         = None
+_customise_handlers: list   = []
 
 
 def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
@@ -62,7 +62,7 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
         ui.messageBox(
             "FusionkitRibbonAPI is not installed.\n\n"
             "Discord RPC will still work, but ribbon controls\n"
-            "(toggle and reconnect) won't be available.\n\n"
+            "(toggle, reconnect, privacy, customise) won't be available.\n\n"
             "Install FusionkitRibbonAPI to enable them.",
             "Fusionkit - Missing Dependency",
         )
@@ -96,21 +96,22 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
         promoted    = True,
     )
 
-    _customise_handlers.extend(customise.register(ui, manager))
     panel.add_button(
         id          = "customise",
         name        = "Customise Presence",
         tooltip     = "Edit the Discord Rich Presence template strings.",
         icon_path   = CUSTOMISE_ICON,
-        on_execute  = lambda: _on_customise(ui)
+        on_execute  = lambda: _customise_handlers.extend(
+            customise.open_palette(ui, manager)
+        ),
     )
 
 def teardown() -> None:
-    """Unregister the Discord RPC panel. Tab remains."""
+    """Unregister the Discord RPC panel and close the palette. Tab remains."""
     global _customise_handlers
     _customise_handlers.clear()
 
-    if _ui: customise.unregister(_ui)
+    if _ui: customise.close_palette(_ui)
 
     if HAS_FUSIONKIT: fusionkit.unregister_panel(PANEL_ID)
 
@@ -184,9 +185,6 @@ def _on_privacy(manager: "PresenceManager", panel) -> None:
             tooltip = "Hides the document name from your Discord presence."
         )
         _status("Discord RPC: Privacy mode disabled.")
-
-def _on_customise(ui: adsk.core.UserInterface) -> None:
-    ui.commandDefinitions.itemById(customise.CMD_ID).execute()
 
 
 # -------------------------------------------

@@ -1,12 +1,15 @@
 {
     "python.analysis.extraPaths": [
-        // Path to Fusion Python adsk dependencies
-        "${env:APPDATA}/Autodesk/Autodesk Fusion 360/API/Python/defs",
-        "${env:HOME}/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Python/defs",
+        // // Path to Fusion Python adsk dependencies
+        // "${env:APPDATA}/Autodesk/Autodesk Fusion 360/API/Python/defs",
+        // "${env:HOME}/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Python/defs",
 
-        // Path to FusionkitRibbonAPI
-        "${env:APPDATA}/Autodesk/Autodesk Fusion 360/API/AddIns/FusionkitRibbonAPI",
-        "${env:HOME}/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/FusionkitRibbonAPI"
+        // // Path to FusionkitRibbonAPI
+        // "${env:APPDATA}/Autodesk/Autodesk Fusion 360/API/AddIns/FusionkitRibbonAPI",
+        // "${env:HOME}/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/FusionkitRibbonAPI"
+    
+        "C:/Users/Rhyla/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Python/defs",
+        "C:/Users/Rhyla/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Addins/FusionkitRibbonAPI"
     ],
     "python.analysis.typeCheckingMode": "basic",
     "python.defaultInterpreterPath": "python3",

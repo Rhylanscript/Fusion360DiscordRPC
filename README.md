@@ -14,7 +14,7 @@ Example previews:
 - Elapsed timer from when the add-in was loaded
 - Updates automatically when document is switched
 - Has a 'privacy mode' option which hides document name
-- Full presence customisation through popup window
+- Full presence customisation through popup window (experimenting with using a HTML based popup rather than a native fusion 360 popup)
   ![Customisation Window][customise]
 
 ## Requirements
@@ -87,7 +87,7 @@ If all else fails, replace the entries in settings.json with the direct paths (n
 }
 ```
 
-## What is Shown
+## What is Shown by Default
 
 | Field   | Value                                                 |
 | ------- | ----------------------------------------------------- |
@@ -154,7 +154,7 @@ By using FusionkitRibbonAPI, the add-in can hook into the fusion toolbar and cre
 
 [preview]: /resources/preview.png
 [preview2]: /resources/preview2.png
-[customise]: /resources/customise.png
+[customise]: /resources/customise_html.png
 [logo]: /resources/fusion360.png
 
 <!-- LINK REFERENCES -->
