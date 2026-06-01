@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 import adsk.core
 
 if TYPE_CHECKING: from commands.presence import PresenceManager
+from commands import customise
 
 # Attempt to import Fusionkit
 try:
@@ -32,6 +33,7 @@ _RESOURCES      = os.path.join(_HERE, "..", "resources")
 TOGGLE_ICON     = os.path.join(_RESOURCES, "fusionkit_discord_toggle")
 RECONNECT_ICON  = os.path.join(_RESOURCES, "fusionkit_discord_reconnect")
 PRIVACY_ICON    = os.path.join(_RESOURCES, "fusionkit_discord_privacy")
+CUSTOMISE_ICON  = os.path.join(_RESOURCES, "fusionkit_discord_customise")
 
 PANEL_ID = "discord_rpc"
 
@@ -39,6 +41,7 @@ PANEL_ID = "discord_rpc"
 _enabled = True
 _privacy = False
 _ui = None
+_customise_handlers: list = []
 
 
 def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
@@ -47,14 +50,14 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
     Safe to call every `run()`, idempotent via API.
     """
 
-    global _ui
+    global _ui, _customise_handlers
     _ui = ui
 
     if not HAS_FUSIONKIT:
         print(
             "[DiscordRPC] FusionkitRibbonAPI is not installed - "
             "ribbon controls unavailable. "
-            "Install it from Install it from https://github.com/Rhylanscript/FusionkitRibbonAPI"
+            "Install it from https://github.com/Rhylanscript/FusionkitRibbonAPI"
         )
         ui.messageBox(
             "FusionkitRibbonAPI is not installed.\n\n"
@@ -80,7 +83,8 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
         name        = "Reconnect",
         tooltip     = "Reconnect to Discord. Use if Discord wasn't open when Fusion started.",
         icon_path   = RECONNECT_ICON,
-        on_execute  = lambda: _on_reconnect(manager, panel)
+        on_execute  = lambda: _on_reconnect(manager, panel),
+        promoted    = True,
     )
 
     panel.add_button(
@@ -89,18 +93,29 @@ def setup(manager: "PresenceManager", ui: adsk.core.UserInterface) -> None:
         tooltip     = "Hides the document name from your discord presence.",
         icon_path   = PRIVACY_ICON,
         on_execute  = lambda: _on_privacy(manager, panel),
+        promoted    = True,
+    )
+
+    _customise_handlers.extend(customise.register(ui, manager))
+    panel.add_button(
+        id          = "customise",
+        name        = "Customise Presence",
+        tooltip     = "Edit the Discord Rich Presence template strings.",
+        icon_path   = CUSTOMISE_ICON,
+        on_execute  = lambda: _on_customise(ui)
     )
 
 def teardown() -> None:
     """Unregister the Discord RPC panel. Tab remains."""
+    global _customise_handlers
+    _customise_handlers.clear()
+
+    if _ui: customise.unregister(_ui)
+
     if HAS_FUSIONKIT: fusionkit.unregister_panel(PANEL_ID)
 
 
 # BUTTON CALLBACKS
-
-def _status(msg: str) -> None:
-    """Write a non-blocking message to Fusion's status bar"""
-    if _ui: _ui.statusMessage = msg
 
 def _on_toggle(manager: "PresenceManager", panel) -> None:
     global _enabled
@@ -169,3 +184,15 @@ def _on_privacy(manager: "PresenceManager", panel) -> None:
             tooltip = "Hides the document name from your Discord presence."
         )
         _status("Discord RPC: Privacy mode disabled.")
+
+def _on_customise(ui: adsk.core.UserInterface) -> None:
+    ui.commandDefinitions.itemById(customise.CMD_ID).execute()
+
+
+# -------------------------------------------
+#       HELPERS
+# -------------------------------------------
+
+def _status(msg: str) -> None:
+    """Write a non-blocking message to Fusion's status bar"""
+    if _ui: _ui.statusMessage = msg

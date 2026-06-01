@@ -1,6 +1,6 @@
 # Fusion360DiscordRPC
 
-A Fusion 360 Add-in that shows your current activity in discord via Rich Presence.
+A customisable Fusion 360 Add-in that shows your current activity in discord via Rich Presence.
 
 Example previews:
 
@@ -14,6 +14,8 @@ Example previews:
 - Elapsed timer from when the add-in was loaded
 - Updates automatically when document is switched
 - Has a 'privacy mode' option which hides document name
+- Full presence customisation through popup window
+  ![Customisation Window][customise]
 
 ## Requirements
 
@@ -22,7 +24,7 @@ Example previews:
 You must have the following software installed:
 
 - Autodesk Fusion 360 (shocking)
-- Discord (**desktop app**, _must_ be running)
+- Discord (**desktop app**, _must_ be running for presence to show)
 
 ### Dependencies
 
@@ -119,6 +121,7 @@ Fusion360DiscordRPC/                  # root directory
 │   └── ... (other files)             # any README assets / log files
 │
 ├── commands/                         # folder containing command logic
+│   ├── customise.py                  # logic to customise presence 
 │   ├── presence.py                   # houses all presence logic 
 │   └── ribbon.py                     # FusionkitRibbonAPI call logic
 │
@@ -130,7 +133,8 @@ Fusion360DiscordRPC/                  # root directory
 │   └── document.py                   # document event handlers in here 
 │
 ├── lib/                              # folder containing command logic
-│   └── discord_ipc.py                # Discord IPC client  
+│   ├── discord_ipc.py                # Discord IPC client  
+│   └── template.py                   # manage tokens in customisation
 │
 ├── Fusion360DiscordRPC.manifest      # addin metadata
 ├── Fusion360DiscordRPC.py            # addin entrypoint
@@ -142,12 +146,15 @@ Fusion360DiscordRPC/                  # root directory
 
 Fusion 360 Addins are Python scripts that are loaded into Fusion at runtime. This addin hooks into Fusion's document events and runs on a background thread that polls every 15 seconds by default. On each update it reads the active document name and component count in the doc then sends a `SET_ACTIVITY` command through to Discord using a local IPC socket which is a named pipe on windows (`\\.\pipe\discord-ipc-0`) or a unix socket on macOS.
 
+The addin uses tokens to customise presence to read specific values from Fusion such as workspace details, file states and Fusion properties. These tokens can be referenced during customisation by calling them in braces (e.g. '{app_version}' will give Fusion 360's installed version).
+
 By using FusionkitRibbonAPI, the add-in can hook into the fusion toolbar and create buttons to allow for additional functionality.
 
 <!-- ASSET REFERENCES -->
 
 [preview]: /resources/preview.png
 [preview2]: /resources/preview2.png
+[customise]: /resources/customise.png
 [logo]: /resources/fusion360.png
 
 <!-- LINK REFERENCES -->

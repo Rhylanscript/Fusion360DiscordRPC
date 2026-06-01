@@ -12,6 +12,7 @@ import adsk.core
 import adsk.fusion
 
 from lib.discord_ipc import DiscordIPC
+from lib.template import load as load_templates, render, build_tokens
 from config.CLIENT import CLIENT_ID
 from config.config import LARGE_IMAGE_KEY, POLL_INTERVAL
 
@@ -58,6 +59,13 @@ class PresenceManager:
 
         self._enabled: bool = True
         self._privacy: bool = False
+
+        self._templates: dict[str, str] = load_templates()
+
+    def reload_templates(self) -> None:
+        """Reload templates from disk and push a fresh presence."""
+        self._templates = load_templates()
+        self.push()
 
     # LIFECYCLE
 
@@ -150,56 +158,73 @@ class PresenceManager:
         """Read Fusion state and send a presence update."""
         if not self._ipc or not self._enabled: return
 
-        details, state = self._get_fusion_state()
+        details, state, large_text = self._get_fusion_state()
         self._ipc.set_activity({
-            "details": details,
-            "state": state,
-            "start_ts": self._start_ts,
-            "large_image": LARGE_IMAGE_KEY,
-            "large_text": "Autodesk Fusion 360"
+            "details":      details,
+            "state":        state,
+            "start_ts":     self._start_ts,
+            "large_image":  LARGE_IMAGE_KEY,
+            "large_text":   large_text,
         })
 
     # FUSION STATE
 
-    def _get_fusion_state(self) -> tuple[str, str]:
-        """Return (details, state) strings from the current Fusion session."""
+    def _get_fusion_state(self) -> tuple[str, str, str]:
+        """Return (details, state, large_text) strings from the current Fusion session."""
 
         try: 
             doc = self._app.activeDocument
-            if doc is None: return "Idle", "No Document Open"
+            if doc is None: return self._templates["idle_text"], "", self._templates["large_text"]
 
-            doc_name = doc.name or "Untitled"
-            details = "Working in Fusion 360" if self._privacy else f'Designing "{doc_name}"'
-            state_parts: list[str] = []
+            doc_name        = doc.name or "Untitled"
+            component_count = self._get_component_count(doc)
+            workspace       = self._get_workspace_name()
+            app_version     = self._get_app_version()
 
-            state_parts += self._get_component_info(doc)
-            state_parts += self._get_workspace_info()
+            tokens = build_tokens(
+                document_name   = doc_name,
+                workspace       = workspace,
+                component_count = component_count,
+                app_version     = app_version,
+            )
 
-            state = " · ".join(state_parts) if state_parts else "Fusion 360"
-            return details, state
+            if self._privacy:
+                details = self._templates["privacy_text"]
+            else:
+                details = render(self._templates["details"], tokens)
+
+            state       = render(self._templates["state"], tokens)
+            large_text  = render(self._templates["large_text"], tokens)
+
+            return details, state, large_text
         
-        except Exception: return "Fusion 360", ""
+        except Exception: return "Fusion 360", "", "Autodesk Fusion 360"
 
-    def _get_component_info(self, doc: adsk.core.Document) -> list[str]:
+    def _get_component_count(self, doc: adsk.core.Document) -> str:
         """Return a list with component count string or empty if not available."""
         try:
             design = adsk.fusion.Design.cast(
                 doc.products.itemByProductType("DesignProductType")
             )
 
-            if not design: return []
+            if not design: return ""
 
             count = design.rootComponent.allOccurrences.count + 1
-            return [f"{count} component{'s' if count != 1 else ''}"]
+            return f"{count} component{'s' if count != 1 else ''}"
         
-        except Exception: return []
+        except Exception: return ""
 
-    def _get_workspace_info(self) -> list[str]:
+    def _get_workspace_name(self) -> str:
         """Return a list with the active workspace name or empty if unavailable."""
         try:
             workspace = self._ui.activeWorkspace
-            return [workspace.name] if workspace else []
-        except Exception: return []
+            return workspace.name if workspace else ""
+        except Exception: return ""
+
+    def _get_app_version(self) -> str:
+        try:
+            return self._app.version
+        except Exception: return ""
 
     # INTERNAL
 
