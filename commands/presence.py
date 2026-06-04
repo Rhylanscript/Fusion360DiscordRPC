@@ -13,7 +13,7 @@ import adsk.fusion
 
 from lib.discord_ipc import DiscordIPC
 from lib.template import load as load_templates, render, build_tokens
-from config.CLIENT import CLIENT_ID
+from config.client import CLIENT_ID
 from config.config import LARGE_IMAGE_KEY, POLL_INTERVAL
 
 

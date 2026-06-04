@@ -14,7 +14,7 @@ import sys
 import uuid
 
 from typing import Any, IO
-from config.CLIENT import CLIENT_ID
+from config.client import CLIENT_ID
 
 OP_HANDSHAKE: int = 0
 OP_FRAME: int = 1

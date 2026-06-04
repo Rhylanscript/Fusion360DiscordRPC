@@ -34,22 +34,16 @@ It is recommended to have a copy of the FusionkitRibbonAPI add-in, which can be 
 
 ## Setup
 
-### 1. Create a Discord Application
+### 1. Configure the Client ID (optional)
+
+A default Client ID is already provided in `config/client.py`. If you want to use your own Discord application (custom app name or assets), replace it with your own application ID:
 
 1. Go to the [Discord Developer Portal][portal] and click **New Application**
-2. Name it whatever you want (This is what the application will be shown as in the rich presence - "Fusion 360" or "Fusion360" is recommended)
-3. Copy the **Application ID** from the **General Information** page
-4. Go to **Rich Presence > Art Assets** and upload the [Fusion360 logo][logo], and set the key to `fusion360`
+2. Copy the **Application ID** from the **General Information** page
+3. Open `config/client.py` and replace the default `CLIENT_ID`
+4. Go to **Rich Presence > Art Assets** and upload the [Fusion360 logo][logo] with the key `fusion360`
 
-### 2. Configure the Add in
-
-Create `CLIENT.py` in the directory `config/CLIENT.py` and paste your Application ID into `CLIENT_ID`:
-
-```python
-CLIENT_ID: str = "{paste application id here}"
-```
-
-### 3. Install the Add in
+### 2. Install the Add in
 
 Copy (or symlink) the entire root folder into Fusion360's addins directory, ensure the folder name remains as `Fusion360DiscordRPC`:
 
@@ -60,7 +54,7 @@ Copy (or symlink) the entire root folder into Fusion360's addins directory, ensu
 
 Additionally, a release of the [FusionkitRibbonAPI][fusionkit] dependency must be placed inside the same AddIns folder, ensuring the name remains as `FusionkitRibbonAPI`.
 
-### 4. Run it
+### 3. Run it
 
 1. Open Fusion360 and press `Shift+S` to open scripts & addins
 2. Go to the **Add-Ins** tab and find **Fusion360DiscordRPC**
@@ -91,7 +85,7 @@ If all else fails, replace the entries in settings.json with the direct paths (n
 
 | Field   | Value                                                 |
 | ------- | ----------------------------------------------------- |
-| Details | `Designing {"<document name>` or `in Fusion 360}"`    |
+| Details | `Designing "{<document name>` or `in Fusion 360}"`    |
 | State   | `<N> components · <workspace>`                        |
 | Elapsed | Time since the addin was loaded                       |
 | Icon    | Fusion 360 Logo in `assets/` (provided you do step 1) |
@@ -126,7 +120,7 @@ Fusion360DiscordRPC/                  # root directory
 │   └── ribbon.py                     # FusionkitRibbonAPI call logic
 │
 ├── config/                           # folder containing config files
-│   ├── CLIENT.py                     # contains your CLIENT_ID
+│   ├── client.py                     # contains the CLIENT_ID
 │   └── config.py                     # contains configuration values 
 │
 ├── handlers/                         # folder event handlers
